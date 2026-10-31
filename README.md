@@ -1,58 +1,171 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# EventHub Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel backend for EventHub. It stores events and their sessions and provides
+HTTP endpoints for the mobile apps to sync and retrieve event data.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Receive event data from the Android app's local SQLite database.
+- Store events and related sessions in a Laravel-supported database.
+- Provide an endpoint for retrieving events.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requirements
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.3 or later
+- Composer
+- SQLite (the default database), or another database supported by Laravel
 
-## Learning Laravel
+## Setup
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+From the project directory, install dependencies and prepare the local
+environment:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+cp .env.example .env
+touch database/database.sqlite
+php artisan key:generate
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+The project defaults to SQLite. To use MySQL or another supported database,
+update the `DB_*` values in `.env` before running migrations.
 
-## Contributing
+Create the database tables and start the local server:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+php artisan migrate
+php artisan serve
+```
 
-## Code of Conduct
+The server is available at `http://127.0.0.1:8000`.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## API
 
-## Security Vulnerabilities
+All responses use JSON.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Sync events
+
+`POST /api/events/sync`
+
+Send an `events` array. The event name, date, and location are required.
+
+```json
+{
+  "events": [
+    {
+      "event_code": "EVT-2026-001",
+      "name": "Community Meetup",
+      "date": "2026-11-01",
+      "location": "Main Hall",
+      "organizer": "EventHub",
+      "description": "A community networking event",
+      "contact_email": "events@example.com",
+      "contact_phone": "+1-555-0100",
+      "created_at": "2026-10-31 10:00:00",
+      "event_sessions": [
+        {
+          "name": "Opening Talk",
+          "category": "Keynote",
+          "date": "2026-11-01",
+          "start_time": "09:00",
+          "end_time": "10:00",
+          "room": "Room A",
+          "capacity": 100,
+          "speaker_name": "Alex Morgan",
+          "speaker_role": "Engineer",
+          "speaker_email": "alex@example.com",
+          "description": "Welcome and opening remarks",
+          "skill_level": "Beginner"
+        }
+      ],
+      "sessions": [
+        {
+          "name": "Opening Talk",
+          "category": "Keynote",
+          "date": "2026-11-01",
+          "start_time": "09:00",
+          "end_time": "10:00",
+          "room": "Room A",
+          "capacity": 100,
+          "speaker_name": "Alex Morgan",
+          "speaker_role": "Engineer",
+          "speaker_email": "alex@example.com",
+          "description": "Welcome and opening remarks",
+          "skill_level": "Beginner"
+        }
+      ]
+    }
+  ]
+}
+```
+
+The mobile client currently sends both `event_sessions` and `sessions`, with
+the same sessions in each array. Include both keys this way to match the current
+sync controller. Event session fields other than `name` and `category` are
+optional.
+
+Example request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/events/sync \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"events":[{"event_code":"EVT-2026-001","name":"Community Meetup","date":"2026-11-01","location":"Main Hall"}]}'
+```
+
+Successful response:
+
+```json
+{
+  "status": "success",
+  "message": "Successfully synchronized 1 events with Laravel backend."
+}
+```
+
+An empty or missing `events` array returns HTTP `400`.
+
+### List events
+
+`GET /events`
+
+The endpoint is registered to return a JSON response containing `status` and
+`data`. The controller currently eager-loads an `event_sessions` relationship,
+while the `Event` model defines the relationship as `sessions`; align those
+names before relying on this endpoint.
+
+## Android emulator
+
+The Android emulator can reach a Laravel server running on the development
+machine through `10.0.2.2`. The mobile client's default sync URL is:
+
+```text
+http://10.0.2.2:8000/api/events/sync
+```
+
+For a physical device, use the computer's LAN IP address instead of
+`10.0.2.2`, and make sure the device and computer are on the same network.
+Configure Laravel to listen on the network interface, for example:
+
+```bash
+php artisan serve --host=0.0.0.0 --port=8000
+```
+
+## Tests
+
+Run the test suite with:
+
+```bash
+php artisan test
+```
+
+The feature tests include coverage for syncing an event without a CSRF token.
+
+## Security
+
+The sync endpoint currently has no authentication middleware. Do not expose it
+to the public internet without adding appropriate authentication and access
+controls. Keep `.env` and its secrets out of version control.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project uses the MIT License. See [LICENSE](./LICENSE).

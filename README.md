@@ -62,6 +62,7 @@ Send an `events` array. The event name, date, and location are required.
       "contact_email": "events@example.com",
       "contact_phone": "+1-555-0100",
       "created_at": "2026-10-31 10:00:00",
+      "photo_path": "/storage/emulated/0/EventHub/event-banner.jpg",
       "event_sessions": [
         {
           "name": "Opening Talk",
@@ -98,6 +99,9 @@ Send an `events` array. The event name, date, and location are required.
   ]
 }
 ```
+
+`photo_path` is optional and stores the native app's image path as text. Syncing
+the path does not upload the image file.
 
 The mobile client currently sends both `event_sessions` and `sessions`, with
 the same sessions in each array. Include both keys this way to match the current

@@ -11,7 +11,7 @@ class Event extends Model
 
     protected $fillable = [
         'event_code', 'name', 'date', 'location', 'organizer',
-        'description', 'contact_email', 'contact_phone', 'created_at_local'
+        'description', 'contact_email', 'contact_phone', 'created_at_local', 'photo_path',
     ];
 
     public function sessions()

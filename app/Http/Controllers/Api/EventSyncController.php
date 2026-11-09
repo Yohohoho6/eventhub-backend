@@ -27,8 +27,7 @@ class EventSyncController extends Controller
             $syncedCount = 0;
 
             foreach ($incomingEvents as $eventData) {
-                // Create or Insert Event
-                $event = Event::create([
+                $eventAttributes = [
                     'event_code' => $eventData['event_code'] ?? null,
                     'name' => $eventData['name'],
                     'date' => $eventData['date'],
@@ -39,12 +38,20 @@ class EventSyncController extends Controller
                     'contact_phone' => $eventData['contact_phone'] ?? null,
                     'created_at_local' => $eventData['created_at'] ?? null,
                     'photo_path' => $eventData['photo_path'] ?? $eventData['photoPath'] ?? null,
-                ]);
+                ];
+
+                $event = $eventAttributes['event_code'] !== null
+                    ? Event::updateOrCreate(
+                        ['event_code' => $eventAttributes['event_code']],
+                        $eventAttributes,
+                    )
+                    : Event::create($eventAttributes);
 
                 $syncedCount++;
 
-                // Handle Sessions if attached
                 $sessions = $eventData['event_sessions'] ?? $eventData['sessions'] ?? [];
+
+                $event->sessions()->delete();
 
                 if (is_array($sessions)) {
                     foreach ($sessions as $sessionData) {
